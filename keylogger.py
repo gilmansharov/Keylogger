@@ -203,11 +203,3 @@ hm = pyHook.HookManager()
 disallow_Multiple_Instances()
 thread = myThread(1, "Thread", 1)
 thread.start()
-
-
-
-
-
-    
-    
-
